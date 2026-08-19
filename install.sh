@@ -5,7 +5,7 @@ set -e
 echo "+--------------------------+"
 echo "|                          |"
 echo "|      Sulfur++ Lang       |"
-echo "| Made by: Enginostek Labs |"
+echo "| Made by: Sulfur++ Team   |"
 echo "|                          |"
 echo "+--------------------------+"
 

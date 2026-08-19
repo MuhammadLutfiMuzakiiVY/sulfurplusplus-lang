@@ -21,8 +21,8 @@ assert(arr[1] == 99, "arr[1] update");
 var d = {"lang": "Sulfur++", "version": 1};
 assert(d["lang"] == "Sulfur++", "d['lang']");
 assert(d["version"] == 1, "d['version']");
-d["author"] = "Enginostek";
-assert(d["author"] == "Enginostek", "d['author'] insertion");
+d["author"] = "Sulfur++";
+assert(d["author"] == "Sulfur++", "d['author'] insertion");
 
 // Nested matrix
 var mat = [

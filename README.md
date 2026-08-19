@@ -10,7 +10,7 @@
   <a href="#-automated-test-suite"><img src="https://img.shields.io/badge/tests-24%20passed%20(100%25)-success.svg" alt="Tests"></a>
   <a href="#-performance-benchmarks"><img src="https://img.shields.io/badge/performance-benchmarked-yellow.svg" alt="Benchmarks"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <a href="https://github.com/HafizDaffa01/sulfurplusplus-lang"><img src="https://img.shields.io/badge/version-1.0.3--A-orange.svg" alt="Version"></a>
+  <a href="https://github.com/SulfurPlusPlus/sulfurplusplus-lang"><img src="https://img.shields.io/badge/version-1.0.3--A-orange.svg" alt="Version"></a>
 </p>
 
 ---
