@@ -64,6 +64,10 @@ set(CORE_SOURCES
     src/core/semantic/symbol_table.cpp
     src/core/semantic/type_checker.cpp
     src/core/semantic/analyzer.cpp
+    src/core/ir/instruction.cpp
+    src/core/ir/builder.cpp
+    src/core/ir/ast_lower.cpp
+    src/core/ir/passes.cpp
     src/core/formatter.cpp
     src/core/linter.cpp
 )

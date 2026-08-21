@@ -1,0 +1,154 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Declarations
+   File: docs/language/grammar/declarations.ebnf
+   Status: Derived from parser.cpp + ast.hpp
+   ============================================================ *)
+
+
+(* ---- Declarations (appear at top-level or inside blocks) ---- *)
+
+declaration         ::= variable_declaration
+                      | function_declaration
+                      | class_declaration
+                      | struct_declaration
+                      | interface_declaration ;
+
+
+(* ============================================================
+   5. VARIABLE DECLARATIONS
+   AST: VarDeclStmt { keyword, name, type, initializer, line }
+   Parser: parseVarDecl()
+   ============================================================ *)
+
+variable_declaration
+    ::= ( 'let' | 'var' | 'auto' ) IDENTIFIER [ ':' type ] [ '=' expression ] ';' ;
+
+
+(* ============================================================
+   6. FUNCTION DECLARATIONS
+   AST: FnDeclStmt { name, params, retType, body, isMethod, line }
+   Parser: parseFnDecl()
+   ============================================================ *)
+
+function_declaration
+    ::= 'fn' [ IDENTIFIER ] '(' [ parameter_list ] ')' [ return_type ] block ;
+
+return_type         ::= ( '->' | ':' ) type ;
+
+parameter_list      ::= parameter { ',' parameter } ;
+parameter           ::= IDENTIFIER [ ':' type ] ;
+
+
+(* ============================================================
+   8. STRUCT DECLARATIONS
+   AST: StructDeclStmt { name, fields, line }
+   Parser: parseStructDecl()
+   ============================================================ *)
+
+struct_declaration
+    ::= 'struct' IDENTIFIER '{' { struct_field } '}' ;
+
+struct_field        ::= IDENTIFIER ':' type [ ',' ] ';' ;
+    (* Note: parser accepts optional comma before required semicolon *)
+
+
+(* ============================================================
+   9. CLASS DECLARATIONS
+   AST: ClassDeclStmt { name, interfaces, members, ctorOrder, dtorOrder, line }
+   Parser: parseClassDecl()
+   ============================================================ *)
+
+class_declaration
+    ::= 'class' IDENTIFIER [ ':' interface_list ] '{' { class_member } '}' ;
+
+interface_list      ::= IDENTIFIER { ',' IDENTIFIER } ;
+
+class_member        ::= constructor_order
+                      | destructor_order
+                      | method_declaration
+                      | field_declaration
+                      | field_declaration_kw ;
+
+constructor_order   ::= CONSTRUCTOR_ORDER IDENTIFIER ';' ;
+    (* Lexed as +N> token. E.g., +1>init; means init runs at order 1 *)
+
+destructor_order    ::= DESTRUCTOR_ORDER IDENTIFIER ';' ;
+    (* Lexed as ~N> token. E.g., ~1>cleanup; means cleanup runs at order 1 *)
+
+method_declaration  ::= 'fn' IDENTIFIER '(' [ parameter_list ] ')' [ return_type ] block ;
+    (* Same as function_declaration but isMethod=true *)
+
+field_declaration   ::= IDENTIFIER [ ':' type ] [ '=' expression ] ';' ;
+    (* Bare identifier field: name; or name: type; or name: type = expr; *)
+
+field_declaration_kw
+    ::= ( 'let' | 'var' | 'auto' ) variable_declaration ;
+    (* Field with keyword prefix, delegates to parseVarDecl *)
+
+
+(* ============================================================
+   12. INTERFACE DECLARATIONS
+   AST: InterfaceDeclStmt { name, methods, line }
+   Parser: parseInterfaceDecl()
+   ============================================================ *)
+
+interface_declaration
+    ::= 'interface' IDENTIFIER '{' { interface_method } '}' ;
+
+interface_method    ::= 'fn' IDENTIFIER '(' [ parameter_list ] ')' [ ':' type ] ';' ;
+
+
+(* ============================================================
+   MODULE SYSTEM DECLARATIONS
+   Parser: parseImport(), parseExport(), parseExpose(), parseOverwrite()
+   ============================================================ *)
+
+import_declaration
+    ::= 'import' module_path [ 'as' IDENTIFIER ] [ import_flags ] ';' ;
+
+module_path         ::= TOKEN { TOKEN } ;
+    (* Parser collects all tokens until 'as', ';', or '--' *)
+
+import_flags        ::= '--' 'use' '=' '[' IDENTIFIER { ',' IDENTIFIER } ']' ;
+
+export_declaration  ::= 'export' 'this' 'as' module_path ';' ;
+
+expose_declaration  ::= 'expose' STRING_LITERAL 'as' IDENTIFIER ';' ;
+
+
+(* ============================================================
+   EXTENSION — Not yet in parser
+   ============================================================ *)
+
+(* [EXTENSION] Enum *)
+(* enum_declaration ::= 'enum' IDENTIFIER '{' enum_variant { ',' enum_variant } '}' ; *)
+(* enum_variant     ::= IDENTIFIER [ '(' type { ',' type } ')' ] [ '=' expression ] ; *)
+
+(* [EXTENSION] Trait *)
+(* trait_declaration ::= 'trait' IDENTIFIER '{' { trait_member } '}' ; *)
+(* trait_member      ::= function_signature | field_signature | associated_type ; *)
+
+(* [EXTENSION] Type Alias *)
+(* type_alias       ::= 'type' IDENTIFIER '=' type ';' ; *)
+
+(* [EXTENSION] Generics on declarations *)
+(* generic_parameters ::= '<' generic_parameter { ',' generic_parameter } '>' ; *)
+(* generic_parameter  ::= IDENTIFIER [ ':' type_bound { '+' type_bound } ] ; *)
+
+(* [EXTENSION] Property with get/set *)
+(* property_declaration ::= IDENTIFIER ':' type '{' getter? setter? '}' ; *)
+(* getter ::= 'get' block ; *)
+(* setter ::= 'set' [ '(' IDENTIFIER ')' ] block ; *)
+
+(* [EXTENSION] Declaration modifiers *)
+(* declaration_modifier ::= 'public' | 'private' | 'protected' | 'static' *)
+(*                        | 'final' | 'abstract' | 'sealed' | 'async' *)
+(*                        | 'native' | 'extern' | 'inline' | 'const' *)
+(*                        | 'virtual' | 'override' ; *)
+
+(* [EXTENSION] Constructor/Destructor as named methods *)
+(* constructor_declaration ::= 'init' '(' parameter_list? ')' block ; *)
+(* destructor_declaration  ::= 'drop' '(' ')' block ; *)
+
+(* [EXTENSION] Inheritance *)
+(* inheritance_clause ::= 'extends' type ; *)

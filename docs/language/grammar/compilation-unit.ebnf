@@ -1,0 +1,28 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Compilation Unit
+   File: docs/language/grammar/compilation-unit.ebnf
+   Status: Derived from Parser::parse()
+   ============================================================ *)
+
+
+(* ---- Program Entry Point ---- *)
+
+program             ::= { module_item } EOF ;
+
+module_item         ::= import_declaration
+                      | export_declaration
+                      | expose_declaration
+                      | declaration
+                      | statement ;
+
+(* Note: Parser::parse() calls parseStmt() in a loop.
+   parseStmt() dispatches to declarations and statements.
+   There is no separate module/namespace keyword in v0.1. *)
+
+
+(* ============================================================
+   EXTENSION — Planned module system enhancements
+   ============================================================ *)
+
+(* [EXTENSION] module_declaration ::= 'module' qualified_name ';' ; *)
+(* [EXTENSION] namespace_declaration ::= 'namespace' qualified_name block ; *)

@@ -14,6 +14,8 @@
 #include "../include/error.hpp"
 #include "../include/compiler.hpp"
 #include "../include/diagnostic.hpp"
+#include "../include/ir/ast_lower.hpp"
+#include "../include/ir/passes.hpp"
 #include <iomanip>
 #include <csignal>
 
@@ -219,6 +221,7 @@ int main(int argc, char* argv[]) {
     bool watch = false;
     bool compile = false;
     bool jit = false;
+    bool emitIr = false;
     std::string filename;
     std::string outputPath;
 
@@ -228,6 +231,7 @@ int main(int argc, char* argv[]) {
         else if (arg == "--watch" || arg == "-w") watch = true;
         else if (arg == "--compile" || arg == "-c") compile = true;
         else if (arg == "--jit" || arg == "-j") jit = true;
+        else if (arg == "--emit-ir") emitIr = true;
         else if (arg == "-o" && i + 1 < argc) {
             outputPath = argv[++i];
         }
@@ -249,6 +253,7 @@ int main(int argc, char* argv[]) {
                 "    -c, --compile    Compile to a standalone native executable\n"
                 "    -o <output>      Specify output file path (used with -c)\n"
                 "    -j, --jit        Force Just-In-Time (JIT) compilation for all functions\n"
+                "        --emit-ir    Emit Sulfur-IR (intermediate representation) and exit\n"
                 "    -v, --version    Print version information\n"
                 "    -h, --help       Print this help message\n";
             return 0;
@@ -261,6 +266,38 @@ int main(int argc, char* argv[]) {
     if (filename.empty() && !compile) {
         runREPL(debug, jit);
         return 0;
+    }
+
+    if (emitIr) {
+        if (filename.empty()) {
+            std::cerr << "\033[31;1mError: --emit-ir requires a source file.\033[0m\n";
+            return 1;
+        }
+        try {
+            std::string src = readFile(filename);
+            Lexer lex(src, filename);
+            auto tokens = lex.tokenize();
+            Parser par(std::move(tokens));
+            auto stmts = par.parse();
+
+            ASTLowerer lowerer;
+            auto irModule = lowerer.lower(stmts, filename);
+            ir_passes::runAllPasses(irModule);
+            std::cout << irModule.dump();
+            return 0;
+        } catch (SulfurError& e) {
+            Diagnostic d{
+                (e.code.rfind("FE_", 0) == 0) ? DiagnosticSeverity::FATAL :
+                (e.code.rfind("W_", 0) == 0) ? DiagnosticSeverity::WARNING :
+                DiagnosticSeverity::ERROR,
+                e.code, e.what(), filename, e.line, e.col, 1, e.hint
+            };
+            DiagnosticEngine::render(d, std::cerr, true);
+            return 1;
+        } catch (std::exception& e) {
+            std::cerr << "\033[31;1mError: " << e.what() << "\033[0m\n";
+            return 1;
+        }
     }
 
     if (compile) {

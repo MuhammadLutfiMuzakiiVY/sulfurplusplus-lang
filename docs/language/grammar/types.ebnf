@@ -1,0 +1,83 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Type Rules
+   File: docs/language/grammar/types.ebnf
+   Status: Derived from Parser::parseType()
+   ============================================================ *)
+
+
+(* ---- Type ---- *)
+
+type                ::= base_type [ '?' ] ;
+    (* Nullable suffix: str? means str-or-null *)
+
+base_type           ::= primitive_type
+                      | collection_type
+                      | pointer_type
+                      | IDENTIFIER
+                      | 'auto' ;
+    (* IDENTIFIER covers user-defined types: class/struct/interface names *)
+    (* 'auto' is accepted in type position for inference *)
+
+
+(* ---- Primitive Types ---- *)
+
+primitive_type      ::= integer_type
+                      | float_type
+                      | 'bool'
+                      | 'char'
+                      | 'str'
+                      | 'void' ;
+
+integer_type        ::= 'int_8'  | 'int_16'  | 'int_32'  | 'int_64'
+                      | 'uint_8' | 'uint_16' | 'uint_32' | 'uint_64' ;
+
+float_type          ::= 'float_32' | 'float_64' ;
+
+
+(* ---- Collection Types ---- *)
+
+collection_type     ::= 'list'
+                      | 'set'
+                      | 'dict'
+                      | 'matrix' ;
+
+(* When followed by '<', becomes generic: list<int_64>, dict<str, int_64> *)
+
+
+(* ---- Generic Type Application ---- *)
+(* Parser::parseType() handles generic syntax after any type token *)
+
+generic_type        ::= base_type '<' type [ ',' type ] '>' ;
+    (* Examples: list<int_64>, dict<str, int_64>, ptr<int_32> *)
+
+
+(* ---- Pointer Type ---- *)
+
+pointer_type        ::= 'ptr' '<' type '>' ;
+    (* Only valid inside unsafe blocks *)
+
+
+(* ---- Nullable Type ---- *)
+
+nullable_type       ::= type '?' ;
+    (* Syntactic sugar: any type can be made nullable *)
+
+
+(* ============================================================
+   EXTENSION — Not yet in parser, planned for future versions
+   ============================================================ *)
+
+(* [EXTENSION] Function type: fn(int_64, str) -> bool *)
+(* function_type   ::= 'fn' '(' type_list? ')' '->' type ; *)
+
+(* [EXTENSION] Tuple type: (int_64, str) *)
+(* tuple_type      ::= '(' type ',' type { ',' type } ')' ; *)
+
+(* [EXTENSION] Union type: int_64 | str *)
+(* union_type      ::= type '|' type { '|' type } ; *)
+
+(* [EXTENSION] Reference type: &int_64, &mut str *)
+(* reference_type  ::= '&' [ 'mut' ] type ; *)
+
+(* [EXTENSION] Array type with size: [int_64; 10] *)
+(* sized_array     ::= '[' type ';' expression ']' ; *)

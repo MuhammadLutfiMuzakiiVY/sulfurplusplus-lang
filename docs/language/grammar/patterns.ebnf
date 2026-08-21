@@ -1,0 +1,71 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Pattern Matching
+   File: docs/language/grammar/patterns.ebnf
+   Status: Derived from Parser::parseMatch()
+   ============================================================ *)
+
+
+(* ---- Current Implementation (v0.1) ---- *)
+(* Match patterns in v0.1 are expression-based, not structural.
+   The parser evaluates each pattern as an expression and compares
+   via equality. The only special pattern is '_' (wildcard/default). *)
+
+match_pattern       ::= '_'                  (* wildcard, default case *)
+                      | expression ;          (* compared via equality *)
+
+match_case          ::= match_pattern '=>' block ;
+    (* AST: MatchCase { pattern, body, line }
+       pattern is nullptr for wildcard '_' *)
+
+
+(* ============================================================
+   EXTENSION — Structural Pattern Matching
+   These require new AST nodes and semantic rules before activation.
+   ============================================================ *)
+
+(* [EXTENSION] Full pattern language *)
+(* pattern             ::= wildcard_pattern *)
+(*                       | identifier_pattern *)
+(*                       | literal_pattern *)
+(*                       | tuple_pattern *)
+(*                       | list_pattern *)
+(*                       | struct_pattern *)
+(*                       | enum_pattern *)
+(*                       | range_pattern *)
+(*                       | or_pattern *)
+(*                       | reference_pattern ; *)
+
+(* [EXTENSION] Wildcard *)
+(* wildcard_pattern     ::= '_' ; *)
+
+(* [EXTENSION] Binding with sub-pattern *)
+(* identifier_pattern   ::= IDENTIFIER [ '@' pattern ] ; *)
+
+(* [EXTENSION] Literal comparison *)
+(* literal_pattern      ::= literal ; *)
+
+(* [EXTENSION] Tuple destructuring *)
+(* tuple_pattern        ::= '(' pattern ',' pattern { ',' pattern } ')' ; *)
+
+(* [EXTENSION] List destructuring *)
+(* list_pattern         ::= '[' [ pattern { ',' pattern } ] ']' ; *)
+
+(* [EXTENSION] Struct destructuring *)
+(* struct_pattern       ::= IDENTIFIER '{' struct_pattern_field { ',' struct_pattern_field } '}' ; *)
+(* struct_pattern_field ::= IDENTIFIER [ ':' pattern ] ; *)
+
+(* [EXTENSION] Enum variant matching *)
+(* enum_pattern         ::= qualified_name [ '(' pattern { ',' pattern } ')' ] ; *)
+
+(* [EXTENSION] Range pattern *)
+(* range_pattern        ::= literal '..' literal *)
+(*                        | literal '..=' literal ; *)
+
+(* [EXTENSION] Or pattern *)
+(* or_pattern           ::= pattern '|' pattern { '|' pattern } ; *)
+
+(* [EXTENSION] Reference pattern *)
+(* reference_pattern    ::= '&' [ 'mut' ] pattern ; *)
+
+(* [EXTENSION] Guard clause *)
+(* match_case_ext       ::= pattern [ 'if' expression ] '=>' ( expression | block ) ; *)

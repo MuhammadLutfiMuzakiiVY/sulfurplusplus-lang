@@ -1,0 +1,253 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Expressions
+   File: docs/language/grammar/expressions.ebnf
+   Status: Derived from parser.cpp expression methods
+
+   PRECEDENCE (implemented, highest binds tightest):
+
+   Level  Category          Operators                Parser Method
+   ─────  ────────────────  ─────────────────────    ─────────────
+   16     Primary           literals, ident, (...)   parsePrimary
+   15     Postfix           . ?. :: -> [] ()         parsePostfix
+   14     Pipeline          -> (pipeline)            parsePipeline
+   13     Unary prefix      ! - ~ & *               parseUnary
+   12     Multiplicative    * / % **                 parseMulDiv
+   11     Additive          + -                      parseAddSub
+   10     Shift / Stream    << >>                    parseShift
+   9      Comparison        < <= > >=                parseComparison
+   8      Equality          == !=                    parseEquality
+   7      Bitwise AND       &                        parseBitwiseAnd
+   6      Bitwise XOR       ^                        parseBitwiseXor
+   5      Bitwise OR        |                        parseBitwiseOr
+   4      Logical AND       &&                       parseAnd
+   3      Logical OR        ||                       parseOr
+   2      Null Coalescing   ??                       parseNullCoal
+   1      Ternary           ? :                      parseTernary
+   0      Assignment        = += -= *= /=            parseAssign
+
+   ============================================================ *)
+
+
+(* ---- Expression Entry Point ---- *)
+
+expression          ::= assignment_expression ;
+
+
+(* ---- Level 0: Assignment (R→L) ---- *)
+(* AST: AssignExpr { target, op, value, line } *)
+
+assignment_expression
+    ::= ternary_expression [ assignment_op assignment_expression ] ;
+
+assignment_op       ::= '=' | '+=' | '-=' | '*=' | '/=' ;
+
+
+(* ---- Level 1: Ternary (R→L) ---- *)
+(* AST: TernaryExpr { cond, thenExpr, elseExpr, line } *)
+
+ternary_expression
+    ::= null_coalesce_expression [ '?' expression ':' expression ] ;
+
+
+(* ---- Level 2: Null Coalescing (L→R) ---- *)
+(* AST: NullCoalExpr { left, right, line } *)
+
+null_coalesce_expression
+    ::= logical_or_expression { '??' logical_or_expression } ;
+
+
+(* ---- Level 3: Logical OR (L→R) ---- *)
+(* AST: BinaryExpr { op="||", left, right, line } *)
+
+logical_or_expression
+    ::= logical_and_expression { '||' logical_and_expression } ;
+
+
+(* ---- Level 4: Logical AND (L→R) ---- *)
+(* AST: BinaryExpr { op="&&", left, right, line } *)
+
+logical_and_expression
+    ::= bitwise_or_expression { '&&' bitwise_or_expression } ;
+
+
+(* ---- Level 5: Bitwise OR (L→R) ---- *)
+(* AST: BinaryExpr { op="|", left, right, line } *)
+
+bitwise_or_expression
+    ::= bitwise_xor_expression { '|' bitwise_xor_expression } ;
+
+
+(* ---- Level 6: Bitwise XOR (L→R) ---- *)
+(* AST: BinaryExpr { op="^", left, right, line } *)
+
+bitwise_xor_expression
+    ::= bitwise_and_expression { '^' bitwise_and_expression } ;
+
+
+(* ---- Level 7: Bitwise AND (L→R) ---- *)
+(* AST: BinaryExpr { op="&", left, right, line } *)
+
+bitwise_and_expression
+    ::= equality_expression { '&' equality_expression } ;
+
+
+(* ---- Level 8: Equality (L→R) ---- *)
+(* AST: BinaryExpr { op="==" | "!=", left, right, line } *)
+
+equality_expression
+    ::= comparison_expression { ( '==' | '!=' ) comparison_expression } ;
+
+
+(* ---- Level 9: Comparison (L→R) ---- *)
+(* AST: BinaryExpr { op="<" | "<=" | ">" | ">=", left, right, line } *)
+
+comparison_expression
+    ::= shift_expression { ( '<' | '<=' | '>' | '>=' ) shift_expression } ;
+
+
+(* ---- Level 10: Shift / Stream (L→R) ---- *)
+(* AST: BinaryExpr { op="<<" | ">>", left, right, line } *)
+(* Note: << doubles as stream-output, >> as stream-input *)
+
+shift_expression
+    ::= additive_expression { ( '<<' | '>>' ) additive_expression } ;
+
+
+(* ---- Level 11: Additive (L→R) ---- *)
+(* AST: BinaryExpr { op="+" | "-", left, right, line } *)
+
+additive_expression
+    ::= multiplicative_expression { ( '+' | '-' ) multiplicative_expression } ;
+
+
+(* ---- Level 12: Multiplicative (L→R) ---- *)
+(* AST: BinaryExpr { op="*" | "/" | "%" | "**", left, right, line } *)
+
+multiplicative_expression
+    ::= unary_expression { ( '*' | '/' | '%' | '**' ) unary_expression } ;
+
+
+(* ---- Level 13: Unary Prefix (R→L) ---- *)
+(* AST: UnaryExpr { op, operand, line } *)
+(* AST: AddrOfExpr { operand, line }     for '&' prefix *)
+(* AST: DerefExpr { operand, line }      for '*' prefix *)
+
+unary_expression    ::= '!' unary_expression
+                      | '-' unary_expression
+                      | '~' unary_expression
+                      | '&' unary_expression          (* address-of *)
+                      | '*' unary_expression          (* dereference *)
+                      | pipeline_expression ;
+
+
+(* ---- Level 14: Pipeline (L→R) ---- *)
+(* AST: PipelineExpr { left, right, line } *)
+(* Note: uses ARROW token '->' which is shared with return type syntax.
+   Context determines meaning: after unary = pipeline, after ')' in fn = return type *)
+
+pipeline_expression
+    ::= postfix_expression { '->' postfix_expression } ;
+
+
+(* ---- Level 15: Postfix (L→R) ---- *)
+(* AST: MemberExpr, CallExpr, IndexExpr *)
+
+postfix_expression  ::= primary_expression { postfix_suffix } ;
+
+postfix_suffix      ::= member_access
+                      | call_suffix
+                      | index_suffix ;
+
+member_access       ::= ( '.' | '?.' | '::' | '->' ) IDENTIFIER [ call_suffix ] ;
+    (* AST: MemberExpr { object, member, safe, op, line }
+       If followed by '(', wraps in CallExpr { callee=MemberExpr, args, line } *)
+
+call_suffix         ::= '(' [ argument_list ] ')' ;
+    (* AST: CallExpr { callee, args, line } *)
+
+argument_list       ::= expression { ',' expression } ;
+
+index_suffix        ::= '[' expression ']' ;
+    (* AST: IndexExpr { object, index, line } *)
+
+
+(* ---- Level 16: Primary ---- *)
+
+primary_expression  ::= literal
+                      | IDENTIFIER
+                      | 'this'
+                      | lambda_expression
+                      | new_expression
+                      | delete_expression
+                      | list_literal
+                      | dict_literal
+                      | grouped_expression ;
+
+
+(* ---- Lambda / Closure ---- *)
+(* AST: LambdaExpr { params, retType, body, line } *)
+(* Note: Sulfur++ uses fn-style lambdas, not |params| style *)
+
+lambda_expression   ::= 'fn' [ IDENTIFIER ] '(' [ parameter_list ] ')'
+                        [ ( ':' | '->' ) type ] block ;
+
+
+(* ---- Object Creation ---- *)
+(* AST: NewExpr { className, args, line } *)
+
+new_expression      ::= 'new' qualified_name '(' [ argument_list ] ')' ;
+qualified_name      ::= IDENTIFIER { ( '.' | '::' ) IDENTIFIER } ;
+
+
+(* ---- Deletion ---- *)
+(* AST: DeleteExpr { operand, line } *)
+
+delete_expression   ::= 'delete' primary_expression ;
+
+
+(* ---- Collection Literals ---- *)
+
+(* AST: ListLitExpr { elements, line } *)
+list_literal        ::= '[' [ expression { ',' expression } ] ']' ;
+
+(* AST: DictLitExpr { pairs, line } *)
+dict_literal        ::= '{' [ dict_entry { ',' dict_entry } ] '}' ;
+dict_entry          ::= expression ':' expression ;
+
+
+(* ---- Grouped ---- *)
+
+grouped_expression  ::= '(' expression ')' ;
+
+
+(* ============================================================
+   EXTENSION — Not yet in parser
+   ============================================================ *)
+
+(* [EXTENSION] |> as dedicated pipeline token (currently uses ->) *)
+(* pipeline_expression ::= postfix_expression { '|>' postfix_expression } ; *)
+
+(* [EXTENSION] Range expressions *)
+(* range_expression    ::= additive_expression [ ('..' | '..=') additive_expression ] ; *)
+
+(* [EXTENSION] Await expression *)
+(* await_expression    ::= 'await' expression ; *)
+
+(* [EXTENSION] Integer division *)
+(* Additional multiplicative op: '//' for integer division *)
+
+(* [EXTENSION] Compound assignments: %=, &=, |=, ^=, <<=, >>= *)
+
+(* [EXTENSION] Postfix increment/decrement: ++, -- *)
+
+(* [EXTENSION] Set literal: set{1, 2, 3} *)
+
+(* [EXTENSION] Tuple literal: (a, b, c) *)
+
+(* [EXTENSION] Named arguments: foo(name=value) *)
+
+(* [EXTENSION] Spread arguments: foo(...args) *)
+
+(* [EXTENSION] Super expression: super.method() *)
+
+(* [EXTENSION] Function reference: ::functionName *)

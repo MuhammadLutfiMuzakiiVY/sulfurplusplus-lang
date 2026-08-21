@@ -1,0 +1,124 @@
+(* Sulfur++ Official EBNF Grammar v0.1 *)
+(* Single Source of Truth for Lexer, Parser & AST Builder *)
+
+program         ::= module_decl? import_decl* declaration* ;
+
+module_decl     ::= "module" identifier ";" ;
+
+import_decl     ::= "import" identifier [ "as" identifier ] ";" 
+                  | "from" identifier "import" ( identifier | "{" identifier_list "}" ) ";" ;
+
+declaration     ::= variable_decl
+                  | function_decl
+                  | class_decl
+                  | struct_decl
+                  | enum_decl
+                  | interface_decl ;
+
+variable_decl   ::= ( "let" | "var" | "const" ) identifier [ ":" type ] [ "=" expression ] ";" ;
+
+function_decl   ::= [ attribute ] [ visibility ] [ "async" ] "fn" identifier [ generic_params ] 
+                    "(" [ parameters ] ")" [ "->" type ] block ;
+
+parameters      ::= parameter { "," parameter } ;
+parameter       ::= [ "..." ] identifier [ ":" type ] [ "=" expression ] ;
+
+generic_params  ::= "<" identifier_list ">" ;
+identifier_list ::= identifier { "," identifier } ;
+
+class_decl      ::= [ visibility ] "class" identifier [ "extends" identifier ] 
+                    [ "implements" identifier_list ] "{" class_member* "}" ;
+
+class_member    ::= [ visibility ] ( variable_decl | function_decl | init_decl ) ;
+init_decl       ::= "fn" "init" "(" [ parameters ] ")" block ;
+
+struct_decl     ::= [ visibility ] "struct" identifier "{" struct_field* "}" ;
+struct_field    ::= identifier ":" type ";" ;
+
+enum_decl       ::= [ visibility ] "enum" identifier "{" enum_member* "}" ;
+enum_member     ::= identifier [ "(" type_list ")" ] [ "," ] ;
+
+interface_decl  ::= [ visibility ] "interface" identifier "{" interface_member* "}" ;
+interface_member::= "fn" identifier "(" [ parameters ] ")" [ "->" type ] ";" ;
+
+type            ::= primitive_type | generic_type | array_type | map_type | optional_type | identifier ;
+primitive_type  ::= "Int" | "Float" | "String" | "Bool" | "Char" | "Null" ;
+generic_type    ::= identifier "<" type_list ">" ;
+type_list       ::= type { "," type } ;
+array_type      ::= "List" "<" type ">" | "[" type "]" ;
+map_type        ::= "Map" "<" type "," type ">" ;
+optional_type   ::= type "?" ;
+
+block           ::= "{" statement* "}" ;
+
+statement       ::= variable_decl
+                  | expression_stmt
+                  | return_stmt
+                  | yield_stmt
+                  | if_stmt
+                  | loop_stmt
+                  | match_stmt
+                  | try_stmt
+                  | throw_stmt
+                  | break_stmt
+                  | continue_stmt
+                  | block ;
+
+expression_stmt ::= expression ";" ;
+return_stmt     ::= "return" [ expression ] ";" ;
+yield_stmt      ::= "yield" [ expression ] ";" ;
+throw_stmt      ::= "throw" expression ";" ;
+break_stmt      ::= "break" ";" ;
+continue_stmt   ::= "continue" ";" ;
+
+if_stmt         ::= "if" expression block
+                    ( "else" "if" expression block )*
+                    ( "else" block )? ;
+
+loop_stmt       ::= "for" identifier "in" expression block
+                  | "while" expression block ;
+
+match_stmt      ::= "match" expression "{" match_case* "}" ;
+match_case      ::= "case" pattern [ "if" expression ] ( block | "=>" expression ) ;
+pattern         ::= literal | identifier | "_" ;
+
+try_stmt        ::= "try" block "catch" identifier block [ "finally" block ] ;
+
+attribute       ::= "@" identifier [ "(" expression_list ")" ] ;
+visibility      ::= "public" | "private" | "protected" ;
+
+expression      ::= assignment ;
+assignment      ::= ternary [ ( "=" | "+=" | "-=" | "*=" | "/=" ) assignment ] ;
+ternary         ::= null_coalesce [ "?" expression ":" ternary ] ;
+null_coalesce   ::= logical_or [ "??" logical_or ] ;
+logical_or      ::= logical_and [ "||" logical_and ] ;
+logical_and     ::= equality [ "&&" equality ] ;
+equality        ::= relational [ ( "==" | "!=" ) relational ] ;
+relational      ::= additive [ ( "<" | "<=" | ">" | ">=" ) additive ] ;
+additive        ::= multiplicative [ ( "+" | "-" ) multiplicative ] ;
+multiplicative  ::= exponentiation [ ( "*" | "/" | "%" ) exponentiation ] ;
+exponentiation  ::= unary [ "**" exponentiation ] ;
+
+unary           ::= ( "!" | "-" | "await" ) unary | postfix ;
+postfix         ::= primary ( call_suffix | index_suffix | member_suffix )* ;
+
+call_suffix     ::= "(" [ expression_list ] ")" ;
+index_suffix    ::= "[" expression [ ":" expression ] "]" ;
+member_suffix   ::= "." identifier ;
+
+primary         ::= literal
+                  | identifier
+                  | "(" expression ")"
+                  | array_literal
+                  | map_literal
+                  | lambda_expr ;
+
+array_literal   ::= "[" [ expression_list ] "]" ;
+map_literal     ::= "{" [ map_entries ] "}" ;
+map_entries     ::= map_entry { "," map_entry } [ "," ] ;
+map_entry       ::= expression ":" expression ;
+
+lambda_expr     ::= ( "fn" "(" [ parameters ] ")" | "(" [ parameters ] ")" ) "=>" ( block | expression ) ;
+expression_list ::= expression { "," expression } ;
+
+literal         ::= integer_literal | float_literal | string_literal | char_literal | boolean_literal | null_literal ;

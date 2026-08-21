@@ -1,0 +1,423 @@
+(* ============================================================
+   Sulfur++ Language Grammar v0.1
+   Formal EBNF Specification (Single Source of Truth)
+   Extension: .sfpp
+
+   This grammar is derived directly from the implemented parser
+   (src/core/parser.cpp) and lexer (src/core/lexer.cpp).
+   The C++ parser follows this specification.
+   ============================================================ *)
+
+
+(* ============================================================
+   1. PROGRAM STRUCTURE
+   ============================================================ *)
+
+program             ::= { declaration } EOF ;
+
+
+(* ============================================================
+   2. DECLARATIONS (top-level or statement-level)
+   ============================================================ *)
+
+declaration         ::= variable_declaration
+                      | function_declaration
+                      | class_declaration
+                      | struct_declaration
+                      | interface_declaration
+                      | import_declaration
+                      | export_declaration
+                      | expose_declaration
+                      | statement ;
+
+variable_declaration
+    ::= ( "let" | "var" | "auto" ) IDENTIFIER [ ":" type ] [ "=" expression ] ";" ;
+
+function_declaration
+    ::= "fn" [ IDENTIFIER ] "(" [ parameter_list ] ")" [ ( "->" | ":" ) type ] block ;
+
+parameter_list      ::= parameter { "," parameter } ;
+parameter           ::= IDENTIFIER [ ":" type ] ;
+
+class_declaration
+    ::= "class" IDENTIFIER [ ":" interface_list ] "{" { class_member } "}" ;
+
+interface_list      ::= IDENTIFIER { "," IDENTIFIER } ;
+
+class_member        ::= constructor_order
+                      | destructor_order
+                      | method_declaration
+                      | field_declaration
+                      | field_declaration_kw ;
+
+constructor_order   ::= "+" INTEGER ">" IDENTIFIER ";" ;
+destructor_order    ::= "~" INTEGER ">" IDENTIFIER ";" ;
+
+method_declaration  ::= "fn" IDENTIFIER "(" [ parameter_list ] ")" [ ( "->" | ":" ) type ] block ;
+
+field_declaration   ::= IDENTIFIER [ ":" type ] [ "=" expression ] ";" ;
+field_declaration_kw
+    ::= ( "let" | "var" | "auto" ) IDENTIFIER [ ":" type ] [ "=" expression ] ";" ;
+
+struct_declaration
+    ::= "struct" IDENTIFIER "{" { struct_field } "}" ;
+
+struct_field        ::= IDENTIFIER ":" type [ "," ] ";" ;
+
+interface_declaration
+    ::= "interface" IDENTIFIER "{" { interface_method } "}" ;
+
+interface_method    ::= "fn" IDENTIFIER "(" [ parameter_list ] ")" [ ":" type ] ";" ;
+
+import_declaration
+    ::= "import" module_path [ "as" IDENTIFIER ] [ import_flags ] ";" ;
+
+module_path         ::= TOKEN { TOKEN } ;
+    (* Note: parser collects all tokens until 'as', ';', or '--' *)
+
+import_flags        ::= "--" "use" "=" "[" IDENTIFIER { "," IDENTIFIER } "]" ;
+
+export_declaration  ::= "export" "this" "as" module_path ";" ;
+
+expose_declaration  ::= "expose" STRING_LITERAL "as" IDENTIFIER ";" ;
+
+
+(* ============================================================
+   3. STATEMENTS
+   ============================================================ *)
+
+statement           ::= block
+                      | variable_declaration
+                      | expression_statement
+                      | if_statement
+                      | while_statement
+                      | for_statement
+                      | match_statement
+                      | return_statement
+                      | break_statement
+                      | continue_statement
+                      | defer_statement
+                      | throw_statement
+                      | try_statement
+                      | unsafe_statement
+                      | overwrite_statement ;
+
+block               ::= "{" { statement } "}" ;
+
+expression_statement
+    ::= expression ";" ;
+
+
+(* ============================================================
+   3.1 CONDITIONAL
+   ============================================================ *)
+
+if_statement        ::= "if" "(" expression ")" block
+                        { "else" "if" "(" expression ")" block }
+                        [ "else" block ] ;
+
+
+(* ============================================================
+   3.2 LOOPS
+   ============================================================ *)
+
+while_statement     ::= "while" "(" expression ")" block ;
+
+for_statement       ::= for_in_statement
+                      | for_c_style_statement ;
+
+for_in_statement    ::= "for" "(" IDENTIFIER "in" expression ")" block ;
+
+for_c_style_statement
+    ::= "for" "(" [ for_initializer ] ";" [ expression ] ";" [ expression ] ")" block ;
+
+for_initializer     ::= variable_declaration
+                      | expression_statement ;
+
+
+(* ============================================================
+   3.3 MATCH
+   ============================================================ *)
+
+match_statement     ::= "match" "(" expression ")" "{" { match_case } "}" ;
+
+match_case          ::= ( "_" | expression ) "=>" block ;
+
+
+(* ============================================================
+   3.4 EXCEPTION HANDLING
+   ============================================================ *)
+
+try_statement       ::= "try" block
+                        [ "catch" "(" IDENTIFIER ")" block ]
+                        [ "finally" block ] ;
+
+throw_statement     ::= "throw" expression ";" ;
+
+
+(* ============================================================
+   3.5 CONTROL FLOW
+   ============================================================ *)
+
+return_statement    ::= "return" [ expression ] ";" ;
+break_statement     ::= "break" ";" ;
+continue_statement  ::= "continue" ";" ;
+defer_statement     ::= "defer" block ;
+unsafe_statement    ::= "unsafe" block ;
+overwrite_statement ::= "overwrite" overwrite_target ( "with" | "=" ) expression ";" ;
+overwrite_target    ::= TOKEN { TOKEN } ;
+    (* Note: parser collects tokens until 'with' or '=' *)
+
+
+(* ============================================================
+   4. EXPRESSIONS
+
+   Precedence (highest to lowest, as implemented in parser.cpp):
+
+   Level  Name            Operators               Assoc    Parser Method
+   ─────  ──────────────  ──────────────────────  ─────    ─────────────
+   16     Primary         literals, ident, (...)  -        parsePrimary
+   15     Postfix         .  ?.  ::  ->  []  ()   L→R      parsePostfix
+   14     Pipeline        |>                      L→R      parsePipeline
+   13     Unary           !  -  ~  &  *           R→L      parseUnary
+   12     Mul / Div / Pow *  /  %  **             L→R      parseMulDiv
+   11     Add / Sub       +  -                    L→R      parseAddSub
+   10     Shift / Stream  <<  >>                  L→R      parseShift
+   9      Comparison      <  <=  >  >=            L→R      parseComparison
+   8      Equality        ==  !=                  L→R      parseEquality
+   7      Bitwise AND     &                       L→R      parseBitwiseAnd
+   6      Bitwise XOR     ^                       L→R      parseBitwiseXor
+   5      Bitwise OR      |                       L→R      parseBitwiseOr
+   4      Logical AND     &&                      L→R      parseAnd
+   3      Logical OR      ||                      L→R      parseOr
+   2      Null Coalesce   ??                      L→R      parseNullCoal
+   1      Ternary         ? :                     R→L      parseTernary
+   0      Assignment      = += -= *= /=           R→L      parseAssign
+
+   ============================================================ *)
+
+expression          ::= assignment_expression ;
+
+assignment_expression
+    ::= ternary_expression [ assignment_operator assignment_expression ] ;
+
+assignment_operator ::= "=" | "+=" | "-=" | "*=" | "/=" ;
+
+ternary_expression  ::= null_coalesce_expression [ "?" expression ":" expression ] ;
+
+null_coalesce_expression
+    ::= logical_or_expression { "??" logical_or_expression } ;
+
+logical_or_expression
+    ::= logical_and_expression { "||" logical_and_expression } ;
+
+logical_and_expression
+    ::= bitwise_or_expression { "&&" bitwise_or_expression } ;
+
+bitwise_or_expression
+    ::= bitwise_xor_expression { "|" bitwise_xor_expression } ;
+
+bitwise_xor_expression
+    ::= bitwise_and_expression { "^" bitwise_and_expression } ;
+
+bitwise_and_expression
+    ::= equality_expression { "&" equality_expression } ;
+
+equality_expression
+    ::= comparison_expression { ( "==" | "!=" ) comparison_expression } ;
+
+comparison_expression
+    ::= shift_expression { ( "<" | "<=" | ">" | ">=" ) shift_expression } ;
+
+shift_expression
+    ::= additive_expression { ( "<<" | ">>" ) additive_expression } ;
+
+additive_expression
+    ::= multiplicative_expression { ( "+" | "-" ) multiplicative_expression } ;
+
+multiplicative_expression
+    ::= unary_expression { ( "*" | "/" | "%" | "**" ) unary_expression } ;
+
+unary_expression    ::= ( "!" | "-" | "~" ) unary_expression
+                      | "&" unary_expression         (* address-of *)
+                      | "*" unary_expression         (* dereference *)
+                      | pipeline_expression ;
+
+pipeline_expression ::= postfix_expression { "|>" postfix_expression } ;
+
+postfix_expression  ::= primary_expression { postfix_suffix } ;
+
+postfix_suffix      ::= call_suffix
+                      | member_suffix
+                      | index_suffix ;
+
+call_suffix         ::= "(" [ argument_list ] ")" ;
+argument_list       ::= expression { "," expression } ;
+
+member_suffix       ::= ( "." | "?." | "::" | "->" ) IDENTIFIER [ call_suffix ] ;
+
+index_suffix        ::= "[" expression "]" ;
+
+
+(* ============================================================
+   5. PRIMARY EXPRESSIONS
+   ============================================================ *)
+
+primary_expression  ::= literal
+                      | IDENTIFIER
+                      | "this"
+                      | lambda_expression
+                      | new_expression
+                      | delete_expression
+                      | array_literal
+                      | dict_literal
+                      | grouped_expression ;
+
+lambda_expression   ::= "fn" [ IDENTIFIER ] "(" [ parameter_list ] ")"
+                        [ ( ":" | "->" ) type ] block ;
+
+new_expression      ::= "new" qualified_name "(" [ argument_list ] ")" ;
+qualified_name      ::= IDENTIFIER { ( "." | "::" ) IDENTIFIER } ;
+
+delete_expression   ::= "delete" primary_expression ;
+
+array_literal       ::= "[" [ expression { "," expression } ] "]" ;
+
+dict_literal        ::= "{" [ dict_entry { "," dict_entry } ] "}" ;
+dict_entry          ::= expression ":" expression ;
+
+grouped_expression  ::= "(" expression ")" ;
+
+ps_string           ::= "ps\"" { ps_segment } "\"" ;
+ps_segment          ::= TEXT_CHARS | "{" expression [ ":" format_spec ] "}" ;
+
+
+(* ============================================================
+   6. TYPES
+   ============================================================ *)
+
+type                ::= primitive_type
+                      | collection_type
+                      | pointer_type
+                      | IDENTIFIER
+                      | generic_type
+                      | nullable_type ;
+
+primitive_type      ::= "int_8"  | "int_16"  | "int_32"  | "int_64"
+                      | "uint_8" | "uint_16" | "uint_32" | "uint_64"
+                      | "float_32" | "float_64"
+                      | "bool" | "char" | "str" | "void" ;
+
+collection_type     ::= "list" | "set" | "dict" | "matrix" ;
+
+pointer_type        ::= "ptr" "<" type ">" ;
+
+generic_type        ::= ( collection_type | IDENTIFIER ) "<" type [ "," type ] ">" ;
+
+nullable_type       ::= type "?" ;
+
+
+(* ============================================================
+   7. LITERALS
+   ============================================================ *)
+
+literal             ::= INTEGER_LITERAL
+                      | FLOAT_LITERAL
+                      | STRING_LITERAL
+                      | CHAR_LITERAL
+                      | PS_STRING_LITERAL
+                      | BOOLEAN_LITERAL
+                      | NULL_LITERAL ;
+
+BOOLEAN_LITERAL     ::= "true" | "false" ;
+NULL_LITERAL        ::= "null" ;
+
+
+(* ============================================================
+   8. LEXICAL GRAMMAR (Tokens)
+   ============================================================ *)
+
+INTEGER_LITERAL     ::= DECIMAL_INTEGER
+                      | HEXADECIMAL_INTEGER
+                      | BINARY_INTEGER
+                      | OCTAL_INTEGER ;
+
+DECIMAL_INTEGER     ::= DIGIT { DIGIT | "_" } ;
+HEXADECIMAL_INTEGER ::= "0x" HEX_DIGIT { HEX_DIGIT | "_" } ;
+BINARY_INTEGER      ::= "0b" BIN_DIGIT { BIN_DIGIT | "_" } ;
+OCTAL_INTEGER       ::= "0o" OCT_DIGIT { OCT_DIGIT | "_" } ;
+
+FLOAT_LITERAL       ::= DIGIT { DIGIT } "." DIGIT { DIGIT } [ EXPONENT ] ;
+EXPONENT            ::= ( "e" | "E" ) [ "+" | "-" ] DIGIT { DIGIT } ;
+
+STRING_LITERAL      ::= '"' { STRING_CHAR } '"' ;
+CHAR_LITERAL        ::= "'" CHAR_CHAR "'" ;
+PS_STRING_LITERAL   ::= 'ps"' { PS_CHAR | "{" EXPR_CHARS "}" } '"' ;
+
+IDENTIFIER          ::= ( LETTER | "_" ) { LETTER | DIGIT | "_" } ;
+
+(* --- Character classes --- *)
+
+LETTER              ::= "a" .. "z" | "A" .. "Z" ;
+DIGIT               ::= "0" .. "9" ;
+HEX_DIGIT           ::= DIGIT | "a" .. "f" | "A" .. "F" ;
+BIN_DIGIT           ::= "0" | "1" ;
+OCT_DIGIT           ::= "0" .. "7" ;
+
+STRING_CHAR         ::= ? any character except '"' and '\' ?
+                      | ESCAPE_SEQUENCE ;
+
+CHAR_CHAR           ::= ? any single character except "'" and '\' ?
+                      | ESCAPE_SEQUENCE ;
+
+ESCAPE_SEQUENCE     ::= "\" ( "n" | "t" | "r" | "\" | '"' | "'" | "0" | "x" HEX_DIGIT HEX_DIGIT ) ;
+
+
+(* --- Comments --- *)
+
+LINE_COMMENT        ::= "//" { ? any character except newline ? } NEWLINE ;
+BLOCK_COMMENT       ::= "/*" { ? any character ? } "*/" ;
+
+
+(* --- Whitespace --- *)
+
+WHITESPACE          ::= " " | "\t" | "\r" | "\n" ;
+
+
+(* ============================================================
+   9. KEYWORDS (Reserved)
+   ============================================================ *)
+
+(*
+    let  var  auto  const  fn  return  class  struct  interface
+    if  else  while  for  in  break  continue
+    import  as  export  expose  overwrite  this
+    unsafe  defer  try  catch  throw
+    ptr  ref  new  delete  match
+    null  true  false
+*)
+
+
+(* ============================================================
+   10. OPERATOR TOKENS
+   ============================================================ *)
+
+(*
+    Arithmetic:    +  -  *  /  %  **
+    Comparison:    ==  !=  <  <=  >  >=
+    Logical:       &&  ||  !
+    Bitwise:       &  |  ^  ~  <<  >>
+    Assignment:    =  +=  -=  *=  /=
+    Special:       ->  =>  ??  ?.  ?
+    Stream:        <<  >>
+    Lifecycle:     +N>  ~N>
+*)
+
+
+(* ============================================================
+   11. DELIMITER TOKENS
+   ============================================================ *)
+
+(*
+    (  )  {  }  [  ]  ;  :  ::  ,  .  @  #
+*)

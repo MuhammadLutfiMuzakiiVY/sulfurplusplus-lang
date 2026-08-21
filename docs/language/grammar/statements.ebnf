@@ -1,0 +1,161 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Statements
+   File: docs/language/grammar/statements.ebnf
+   Status: Derived from Parser::parseStmt()
+   ============================================================ *)
+
+
+(* ---- Statement (dispatched from parseStmt) ---- *)
+
+statement           ::= variable_declaration
+                      | function_declaration
+                      | class_declaration
+                      | struct_declaration
+                      | interface_declaration
+                      | block
+                      | if_statement
+                      | while_statement
+                      | for_statement
+                      | match_statement
+                      | return_statement
+                      | break_statement
+                      | continue_statement
+                      | defer_statement
+                      | throw_statement
+                      | try_statement
+                      | unsafe_statement
+                      | overwrite_statement
+                      | expression_statement ;
+
+
+(* ---- Block ---- *)
+(* AST: BlockStmt { stmts, line } *)
+
+block               ::= '{' { statement } '}' ;
+
+
+(* ---- Expression Statement ---- *)
+(* AST: ExprStmt { expr, line } *)
+
+expression_statement ::= expression ';' ;
+
+
+(* ============================================================
+   IF / ELSE
+   AST: IfStmt { cond, thenBranch, elseBranch, line }
+   Parser: parseIf()
+   ============================================================ *)
+
+if_statement        ::= 'if' '(' expression ')' block
+                        { 'else' 'if' '(' expression ')' block }
+                        [ 'else' block ] ;
+    (* Note: conditions require parentheses in current parser *)
+
+
+(* ============================================================
+   WHILE
+   AST: WhileStmt { cond, body, line }
+   Parser: parseWhile()
+   ============================================================ *)
+
+while_statement     ::= 'while' '(' expression ')' block ;
+
+
+(* ============================================================
+   FOR
+   AST: ForStmt | ForCStyleStmt
+   Parser: parseFor()
+   ============================================================ *)
+
+for_statement       ::= for_in_statement
+                      | for_c_style_statement ;
+
+(* AST: ForStmt { var, iterable, body, line } *)
+for_in_statement
+    ::= 'for' '(' IDENTIFIER 'in' expression ')' block ;
+
+(* AST: ForCStyleStmt { init, cond, post, body, line } *)
+for_c_style_statement
+    ::= 'for' '(' [ for_initializer ] ';' [ expression ] ';' [ expression ] ')' block ;
+
+for_initializer     ::= variable_declaration
+                      | expression_statement ;
+    (* Note: variable_declaration already ends with ';' via parseVarDecl,
+       so the first ';' in c-style for is consumed by the initializer *)
+
+
+(* ============================================================
+   MATCH
+   AST: MatchStmt { value, cases, line }
+   AST: MatchCase { pattern, body, line }
+   Parser: parseMatch()
+   ============================================================ *)
+
+match_statement     ::= 'match' '(' expression ')' '{' { match_case } '}' ;
+
+match_case          ::= ( '_' | expression ) '=>' block ;
+    (* '_' is the wildcard/default case, produces MatchCase with null pattern *)
+
+
+(* ============================================================
+   CONTROL FLOW
+   ============================================================ *)
+
+(* AST: ReturnStmt { value, line } *)
+return_statement    ::= 'return' [ expression ] ';' ;
+
+(* AST: BreakStmt { line } *)
+break_statement     ::= 'break' ';' ;
+
+(* AST: ContinueStmt { line } *)
+continue_statement  ::= 'continue' ';' ;
+
+(* AST: DeferStmt { body, line } *)
+defer_statement     ::= 'defer' block ;
+
+(* AST: ThrowStmt { value, line } *)
+throw_statement     ::= 'throw' expression ';' ;
+
+(* AST: UnsafeStmt { body, line } *)
+unsafe_statement    ::= 'unsafe' block ;
+
+(* AST: OverwriteStmt { target, value, line } *)
+overwrite_statement ::= 'overwrite' overwrite_target ( 'with' | '=' ) expression ';' ;
+overwrite_target    ::= TOKEN { TOKEN } ;
+
+
+(* ============================================================
+   EXCEPTION HANDLING
+   AST: TryCatchStmt { tryBody, catchVar, catchBody, finallyBody, line }
+   Parser: parseTryCatch()
+   ============================================================ *)
+
+try_statement       ::= 'try' block
+                        [ 'catch' '(' IDENTIFIER ')' block ]
+                        [ 'finally' block ] ;
+    (* 'finally' is parsed as IDENT with value "finally", not a keyword *)
+
+
+(* ============================================================
+   EXTENSION — Not yet in parser
+   ============================================================ *)
+
+(* [EXTENSION] Do-While loop *)
+(* do_while_statement ::= 'do' block 'while' expression ';' ; *)
+
+(* [EXTENSION] Infinite loop *)
+(* loop_statement     ::= 'loop' block ; *)
+
+(* [EXTENSION] Assert *)
+(* assert_statement   ::= 'assert' expression [ ',' expression ] ';' ; *)
+
+(* [EXTENSION] Labeled break/continue *)
+(* break_statement    ::= 'break' [ IDENTIFIER ] ';' ; *)
+(* continue_statement ::= 'continue' [ IDENTIFIER ] ';' ; *)
+
+(* [EXTENSION] Defer as statement (not just block) *)
+(* defer_statement    ::= 'defer' statement ; *)
+
+(* [EXTENSION] Match with guard clause *)
+(* match_case ::= pattern [ 'if' expression ] '=>' match_body ; *)
+(* match_body ::= expression | block ; *)

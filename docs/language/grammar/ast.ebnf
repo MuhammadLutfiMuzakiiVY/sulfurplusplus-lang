@@ -1,0 +1,1103 @@
+(* ============================================================
+   SULFUR++ ABSTRACT SYNTAX TREE (AST) GRAMMAR
+   Version 0.1 — Formal AST Specification
+   File: docs/language/grammar/ast.ebnf
+   ============================================================ *)
+
+Program
+    ::= ProgramNode(
+            attributes,
+            modules,
+            declarations,
+            statements
+        );
+
+
+(* ============================================================
+   1. SOURCE LOCATION & NODE METADATA
+   ============================================================ *)
+
+SourceSpan
+    ::= {
+        file_id,
+        start_offset,
+        end_offset,
+        start_line,
+        start_column,
+        end_line,
+        end_column
+    };
+
+
+Node
+    ::= {
+        node_id,
+        span,
+        attributes
+    };
+
+
+(* ============================================================
+   2. ATTRIBUTES
+   ============================================================ *)
+
+Attribute
+    ::= AttributeNode(
+            name,
+            arguments
+        );
+
+
+AttributeArgument
+    ::= NamedArgument
+      | Expression ;
+
+
+(* ============================================================
+   3. DECLARATIONS
+   ============================================================ *)
+
+Declaration
+    ::= VariableDeclaration
+      | MutableVariableDeclaration
+      | ConstantDeclaration
+      | FunctionDeclaration
+      | ClassDeclaration
+      | StructDeclaration
+      | EnumDeclaration
+      | TraitDeclaration
+      | TypeAliasDeclaration
+      | ImportDeclaration
+      | ExportDeclaration
+      | ModuleDeclaration
+      | NamespaceDeclaration ;
+
+
+(* ============================================================
+   4. VARIABLE DECLARATIONS
+   ============================================================ *)
+
+VariableDeclaration
+    ::= {
+        pattern,
+        type_annotation?,
+        initializer?,
+        modifiers
+    } ;
+
+
+MutableVariableDeclaration
+    ::= {
+        pattern,
+        type_annotation?,
+        initializer?,
+        modifiers
+    } ;
+
+
+ConstantDeclaration
+    ::= {
+        name,
+        type_annotation?,
+        initializer,
+        modifiers
+    } ;
+
+
+(* ============================================================
+   5. FUNCTION
+   ============================================================ *)
+
+FunctionDeclaration
+    ::= {
+        name,
+        generic_parameters,
+        parameters,
+        return_type?,
+        where_constraints,
+        body,
+        modifiers
+    } ;
+
+
+Parameter
+    ::= {
+        pattern,
+        type_annotation?,
+        default_value?,
+        modifiers
+    } ;
+
+
+ParameterModifier
+    ::= Mut
+      | Ref
+      | Out
+      | Move
+      | This ;
+
+
+(* ============================================================
+   6. CLASS
+   ============================================================ *)
+
+ClassDeclaration
+    ::= {
+        name,
+        generic_parameters,
+        base_class?,
+        interfaces,
+        fields,
+        properties,
+        methods,
+        constructors,
+        destructor?,
+        modifiers
+    } ;
+
+
+ClassField
+    ::= {
+        name,
+        type,
+        initializer?,
+        modifiers
+    } ;
+
+
+ClassProperty
+    ::= {
+        name,
+        type,
+        getter?,
+        setter?,
+        modifiers
+    } ;
+
+
+ConstructorDeclaration
+    ::= {
+        parameters,
+        body,
+        modifiers
+    } ;
+
+
+DestructorDeclaration
+    ::= {
+        body,
+        modifiers
+    } ;
+
+
+(* ============================================================
+   7. STRUCT
+   ============================================================ *)
+
+StructDeclaration
+    ::= {
+        name,
+        generic_parameters,
+        fields,
+        methods,
+        constructors,
+        modifiers
+    } ;
+
+
+StructField
+    ::= {
+        name,
+        type,
+        initializer?,
+        modifiers
+    } ;
+
+
+(* ============================================================
+   8. ENUM
+   ============================================================ *)
+
+EnumDeclaration
+    ::= {
+        name,
+        generic_parameters,
+        variants,
+        modifiers
+    } ;
+
+
+EnumVariant
+    ::= {
+        name,
+        fields,
+        discriminant?
+    } ;
+
+
+EnumVariantField
+    ::= {
+        type,
+        name?
+    } ;
+
+
+(* ============================================================
+   9. TRAIT
+   ============================================================ *)
+
+TraitDeclaration
+    ::= {
+        name,
+        generic_parameters,
+        super_traits,
+        associated_types,
+        methods,
+        fields,
+        modifiers
+    } ;
+
+
+TraitMethod
+    ::= {
+        name,
+        generic_parameters,
+        parameters,
+        return_type?,
+        default_body?
+    } ;
+
+
+AssociatedType
+    ::= {
+        name,
+        bounds
+    } ;
+
+
+(* ============================================================
+   10. TYPE ALIAS
+   ============================================================ *)
+
+TypeAliasDeclaration
+    ::= {
+        name,
+        generic_parameters,
+        target_type,
+        modifiers
+    } ;
+
+
+(* ============================================================
+   11. MODULE
+   ============================================================ *)
+
+ModuleDeclaration
+    ::= {
+        path,
+        modifiers
+    } ;
+
+
+NamespaceDeclaration
+    ::= {
+        path,
+        body,
+        modifiers
+    } ;
+
+
+ImportDeclaration
+    ::= {
+        source,
+        imports,
+        alias?
+    } ;
+
+
+ImportItem
+    ::= {
+        name,
+        alias?
+    } ;
+
+
+ExportDeclaration
+    ::= {
+        target,
+        alias?
+    } ;
+
+
+(* ============================================================
+   12. STATEMENTS
+   ============================================================ *)
+
+Statement
+    ::= BlockStatement
+      | ExpressionStatement
+      | IfStatement
+      | WhileStatement
+      | DoWhileStatement
+      | ForStatement
+      | ForInStatement
+      | LoopStatement
+      | MatchStatement
+      | ReturnStatement
+      | BreakStatement
+      | ContinueStatement
+      | DeferStatement
+      | ThrowStatement
+      | TryStatement
+      | AssertStatement
+      | UnsafeStatement
+      | VariableDeclaration
+      | MutableVariableDeclaration
+      | ConstantDeclaration ;
+
+
+BlockStatement
+    ::= {
+        statements
+    } ;
+
+
+ExpressionStatement
+    ::= {
+        expression
+    } ;
+
+
+(* ============================================================
+   13. IF
+   ============================================================ *)
+
+IfStatement
+    ::= {
+        condition,
+        then_branch,
+        else_if_branches,
+        else_branch?
+    } ;
+
+
+ElseIfBranch
+    ::= {
+        condition,
+        body
+    } ;
+
+
+(* ============================================================
+   14. WHILE
+   ============================================================ *)
+
+WhileStatement
+    ::= {
+        condition,
+        body
+    } ;
+
+
+DoWhileStatement
+    ::= {
+        body,
+        condition
+    } ;
+
+
+(* ============================================================
+   15. FOR
+   ============================================================ *)
+
+ForStatement
+    ::= {
+        initializer?,
+        condition?,
+        increment?,
+        body
+    } ;
+
+
+ForInStatement
+    ::= {
+        pattern,
+        iterable,
+        body
+    } ;
+
+
+LoopStatement
+    ::= {
+        body,
+        label?
+    } ;
+
+
+(* ============================================================
+   16. MATCH
+   ============================================================ *)
+
+MatchStatement
+    ::= {
+        expression,
+        arms
+    } ;
+
+
+MatchArm
+    ::= {
+        pattern,
+        guard?,
+        body
+    } ;
+
+
+(* ============================================================
+   17. CONTROL FLOW
+   ============================================================ *)
+
+ReturnStatement
+    ::= {
+        value?
+    } ;
+
+
+BreakStatement
+    ::= {
+        label?
+    } ;
+
+
+ContinueStatement
+    ::= {
+        label?
+    } ;
+
+
+DeferStatement
+    ::= {
+        statement
+    } ;
+
+
+ThrowStatement
+    ::= {
+        expression
+    } ;
+
+
+(* ============================================================
+   18. EXCEPTION HANDLING
+   ============================================================ *)
+
+TryStatement
+    ::= {
+        body,
+        catches,
+        finally_body?
+    } ;
+
+
+CatchClause
+    ::= {
+        binding?,
+        type?,
+        body
+    } ;
+
+
+(* ============================================================
+   19. ASSERT
+   ============================================================ *)
+
+AssertStatement
+    ::= {
+        condition,
+        message?
+    } ;
+
+
+(* ============================================================
+   20. UNSAFE
+   ============================================================ *)
+
+UnsafeStatement
+    ::= {
+        body
+    } ;
+
+
+(* ============================================================
+   21. EXPRESSIONS
+   ============================================================ *)
+
+Expression
+    ::= LiteralExpression
+      | IdentifierExpression
+      | BinaryExpression
+      | UnaryExpression
+      | AssignmentExpression
+      | ConditionalExpression
+      | PipelineExpression
+      | CallExpression
+      | MemberExpression
+      | OptionalMemberExpression
+      | IndexExpression
+      | LambdaExpression
+      | ArrayExpression
+      | DictionaryExpression
+      | SetExpression
+      | TupleExpression
+      | RangeExpression
+      | ObjectExpression
+      | ThisExpression
+      | SuperExpression
+      | AwaitExpression
+      | CastExpression
+      | TypeCheckExpression ;
+
+
+(* ============================================================
+   22. LITERALS
+   ============================================================ *)
+
+LiteralExpression
+    ::= {
+        kind,
+        value
+    } ;
+
+
+LiteralKind
+    ::= Integer
+      | Float
+      | Complex
+      | String
+      | Char
+      | Boolean
+      | Null ;
+
+
+(* ============================================================
+   23. IDENTIFIER
+   ============================================================ *)
+
+IdentifierExpression
+    ::= {
+        name
+    } ;
+
+
+(* ============================================================
+   24. BINARY
+   ============================================================ *)
+
+BinaryExpression
+    ::= {
+        operator,
+        left,
+        right
+    } ;
+
+
+BinaryOperator
+    ::= Add
+      | Subtract
+      | Multiply
+      | Divide
+      | Modulo
+      | FloorDivide
+
+      | Equal
+      | NotEqual
+      | Less
+      | LessEqual
+      | Greater
+      | GreaterEqual
+
+      | LogicalAnd
+      | LogicalOr
+
+      | BitAnd
+      | BitOr
+      | BitXor
+
+      | ShiftLeft
+      | ShiftRight
+
+      | Range
+      | RangeInclusive ;
+
+
+(* ============================================================
+   25. UNARY
+   ============================================================ *)
+
+UnaryExpression
+    ::= {
+        operator,
+        operand
+    } ;
+
+
+UnaryOperator
+    ::= Negate
+      | Positive
+      | LogicalNot
+      | BitwiseNot
+      | AddressOf
+      | Dereference
+      | Await ;
+
+
+(* ============================================================
+   26. ASSIGNMENT
+   ============================================================ *)
+
+AssignmentExpression
+    ::= {
+        target,
+        operator,
+        value
+    } ;
+
+
+AssignmentOperator
+    ::= Assign
+      | AddAssign
+      | SubAssign
+      | MulAssign
+      | DivAssign
+      | ModAssign
+      | BitAndAssign
+      | BitOrAssign
+      | BitXorAssign
+      | ShiftLeftAssign
+      | ShiftRightAssign ;
+
+
+(* ============================================================
+   27. CONDITIONAL
+   ============================================================ *)
+
+ConditionalExpression
+    ::= {
+        condition,
+        then_expression,
+        else_expression
+    } ;
+
+
+(* ============================================================
+   28. PIPELINE
+   ============================================================ *)
+
+PipelineExpression
+    ::= {
+        left,
+        right
+    } ;
+
+
+(* ============================================================
+   29. CALL
+   ============================================================ *)
+
+CallExpression
+    ::= {
+        callee,
+        generic_arguments,
+        arguments
+    } ;
+
+
+Argument
+    ::= Expression
+      | NamedArgument
+      | SpreadArgument ;
+
+
+NamedArgument
+    ::= {
+        name,
+        value
+    } ;
+
+
+SpreadArgument
+    ::= {
+        expression
+    } ;
+
+
+(* ============================================================
+   30. MEMBER ACCESS
+   ============================================================ *)
+
+MemberExpression
+    ::= {
+        object,
+        member
+    } ;
+
+
+OptionalMemberExpression
+    ::= {
+        object,
+        member
+    } ;
+
+
+IndexExpression
+    ::= {
+        object,
+        index
+    } ;
+
+
+(* ============================================================
+   31. LAMBDA
+   ============================================================ *)
+
+LambdaExpression
+    ::= {
+        parameters,
+        return_type?,
+        body
+    } ;
+
+
+LambdaBody
+    ::= Expression
+      | BlockStatement ;
+
+
+(* ============================================================
+   32. COLLECTION EXPRESSIONS
+   ============================================================ *)
+
+ArrayExpression
+    ::= {
+        elements
+    } ;
+
+
+DictionaryExpression
+    ::= {
+        entries
+    } ;
+
+
+DictionaryEntry
+    ::= {
+        key,
+        value
+    } ;
+
+
+SetExpression
+    ::= {
+        elements
+    } ;
+
+
+TupleExpression
+    ::= {
+        elements
+    } ;
+
+
+(* ============================================================
+   33. RANGE
+   ============================================================ *)
+
+RangeExpression
+    ::= {
+        start,
+        end,
+        inclusive
+    } ;
+
+
+(* ============================================================
+   34. OBJECT CREATION
+   ============================================================ *)
+
+ObjectExpression
+    ::= {
+        type,
+        arguments
+    } ;
+
+
+ThisExpression
+    ::= {} ;
+
+
+SuperExpression
+    ::= {
+        member?
+    } ;
+
+
+AwaitExpression
+    ::= {
+        expression
+    } ;
+
+
+(* ============================================================
+   35. CAST / TYPE CHECK
+   ============================================================ *)
+
+CastExpression
+    ::= {
+        expression,
+        target_type
+    } ;
+
+
+TypeCheckExpression
+    ::= {
+        expression,
+        target_type
+    } ;
+
+
+(* ============================================================
+   36. PATTERN AST
+   ============================================================ *)
+
+Pattern
+    ::= WildcardPattern
+      | IdentifierPattern
+      | LiteralPattern
+      | TuplePattern
+      | ListPattern
+      | StructPattern
+      | EnumPattern
+      | RangePattern
+      | OrPattern
+      | ReferencePattern ;
+
+
+WildcardPattern
+    ::= {} ;
+
+
+IdentifierPattern
+    ::= {
+        name,
+        binding_mode
+    } ;
+
+
+BindingMode
+    ::= Move
+      | Copy
+      | Reference
+      | MutableReference ;
+
+
+LiteralPattern
+    ::= {
+        literal
+    } ;
+
+
+TuplePattern
+    ::= {
+        elements
+    } ;
+
+
+ListPattern
+    ::= {
+        elements,
+        rest?
+    } ;
+
+
+StructPattern
+    ::= {
+        type_name,
+        fields
+    } ;
+
+
+StructPatternField
+    ::= {
+        name,
+        pattern?
+    } ;
+
+
+EnumPattern
+    ::= {
+        variant,
+        fields
+    } ;
+
+
+RangePattern
+    ::= {
+        start,
+        end,
+        inclusive
+    } ;
+
+
+OrPattern
+    ::= {
+        alternatives
+    } ;
+
+
+ReferencePattern
+    ::= {
+        pattern,
+        mutable
+    } ;
+
+
+(* ============================================================
+   37. TYPES
+   ============================================================ *)
+
+Type
+    ::= PrimitiveType
+      | NamedType
+      | GenericType
+      | FunctionType
+      | TupleType
+      | ArrayType
+      | PointerType
+      | ReferenceType
+      | NullableType
+      | UnionType ;
+
+
+PrimitiveType
+    ::= {
+        kind
+    } ;
+
+
+PrimitiveTypeKind
+    ::= Null
+      | Void
+      | Bool
+      | Char
+      | Byte
+      | Int64
+      | Float64
+      | Complex128
+      | String ;
+
+
+NamedType
+    ::= {
+        path
+    } ;
+
+
+GenericType
+    ::= {
+        base,
+        arguments
+    } ;
+
+
+FunctionType
+    ::= {
+        parameters,
+        return_type
+    } ;
+
+
+TupleType
+    ::= {
+        elements
+    } ;
+
+
+ArrayType
+    ::= {
+        element_type
+    } ;
+
+
+PointerType
+    ::= {
+        element_type
+    } ;
+
+
+ReferenceType
+    ::= {
+        element_type,
+        mutable
+    } ;
+
+
+NullableType
+    ::= {
+        inner_type
+    } ;
+
+
+UnionType
+    ::= {
+        types
+    } ;
+
+
+(* ============================================================
+   38. GENERICS
+   ============================================================ *)
+
+GenericParameter
+    ::= {
+        name,
+        bounds,
+        default_type?
+    } ;
+
+
+TypeBound
+    ::= {
+        type
+    } ;
+
+
+WhereConstraint
+    ::= {
+        type,
+        bounds
+    } ;
+
+
+(* ============================================================
+   39. SYMBOL REFERENCES
+   ============================================================ *)
+
+SymbolReference
+    ::= {
+        symbol_id,
+        name,
+        scope_id
+    } ;
+
+
+(* ============================================================
+   40. RESOLVED AST
+   ============================================================ *)
+
+ResolvedNode
+    ::= {
+        ast_node,
+        symbol_reference?,
+        inferred_type?,
+        constant_value?
+    } ;

@@ -1,0 +1,502 @@
+(* ============================================================
+   SULFUR++ LEXICAL GRAMMAR
+   Version 0.1 — Formal Language Specification
+   File: docs/language/grammar/lexical.ebnf
+   ============================================================ *)
+
+TOKEN
+    ::= KEYWORD
+      | IDENTIFIER
+      | INTEGER
+      | FLOAT
+      | COMPLEX
+      | STRING
+      | CHAR
+      | OPERATOR
+      | DELIMITER
+      | COMMENT
+      | WHITESPACE
+      | NEWLINE
+      | SHEBANG
+      | EOF ;
+
+
+(* ============================================================
+   1. KEYWORDS
+   ============================================================ *)
+
+KEYWORD
+    ::= "let"
+      | "var"
+      | "const"
+      | "auto"
+
+      | "fn"
+      | "return"
+
+      | "class"
+      | "struct"
+      | "enum"
+      | "trait"
+      | "interface"
+      | "type"
+
+      | "init"
+      | "drop"
+      | "this"
+      | "super"
+
+      | "if"
+      | "else"
+      | "match"
+
+      | "while"
+      | "do"
+      | "for"
+      | "in"
+      | "loop"
+
+      | "break"
+      | "continue"
+      | "defer"
+
+      | "try"
+      | "catch"
+      | "finally"
+      | "throw"
+
+      | "import"
+      | "export"
+      | "expose"
+      | "overwrite"
+      | "module"
+      | "namespace"
+      | "from"
+      | "as"
+
+      | "public"
+      | "private"
+      | "protected"
+
+      | "static"
+      | "final"
+      | "abstract"
+      | "sealed"
+      | "virtual"
+      | "override"
+
+      | "async"
+      | "await"
+
+      | "unsafe"
+      | "native"
+      | "extern"
+      | "inline"
+
+      | "mut"
+      | "ref"
+      | "out"
+      | "move"
+
+      | "ptr"
+      | "new"
+      | "delete"
+
+      | "get"
+      | "set"
+
+      | "where"
+      | "implements"
+      | "extends"
+
+      | "assert"
+
+      | "true"
+      | "false"
+      | "null"
+
+      | "int_8"  | "int_16"  | "int_32"  | "int_64"
+      | "uint_8" | "uint_16" | "uint_32" | "uint_64"
+      | "float_32" | "float_64"
+      | "bool" | "char" | "str" | "void"
+      | "list" | "dict" | "set" | "matrix"
+      ;
+
+
+(* ============================================================
+   2. RESERVED FUTURE KEYWORDS
+   ============================================================ *)
+
+RESERVED_KEYWORD
+    ::= "macro"
+      | "yield"
+      | "generator"
+      | "actor"
+      | "channel"
+      | "spawn"
+      | "select"
+      | "union"
+      | "package"
+      | "pub"
+      | "priv"
+      | "protected"
+      | "override"
+      | "operator"
+      | "where"
+      ;
+
+
+(* ============================================================
+   3. IDENTIFIERS
+   ============================================================ *)
+
+IDENTIFIER
+    ::= IDENTIFIER_START
+        IDENTIFIER_CONTINUE* ;
+
+
+IDENTIFIER_START
+    ::= LETTER
+      | "_" ;
+
+
+IDENTIFIER_CONTINUE
+    ::= LETTER
+      | DIGIT
+      | "_" ;
+
+
+LETTER
+    ::= ASCII_LETTER
+      | UNICODE_LETTER ;
+
+
+ASCII_LETTER
+    ::= "A".."Z"
+      | "a".."z" ;
+
+
+DIGIT
+    ::= "0".."9" ;
+
+
+(* ============================================================
+   4. INTEGER LITERALS
+   ============================================================ *)
+
+INTEGER
+    ::= DECIMAL_INTEGER
+      | HEX_INTEGER
+      | BINARY_INTEGER
+      | OCTAL_INTEGER ;
+
+
+DECIMAL_INTEGER
+    ::= DECIMAL_DIGIT
+        ( DECIMAL_DIGIT | "_" )* ;
+
+
+HEX_INTEGER
+    ::= ("0x" | "0X")
+        HEX_DIGIT
+        ( HEX_DIGIT | "_" )* ;
+
+
+BINARY_INTEGER
+    ::= ("0b" | "0B")
+        BINARY_DIGIT
+        ( BINARY_DIGIT | "_" )* ;
+
+
+OCTAL_INTEGER
+    ::= ("0o" | "0O")
+        OCTAL_DIGIT
+        ( OCTAL_DIGIT | "_" )* ;
+
+
+DECIMAL_DIGIT
+    ::= "0".."9" ;
+
+
+HEX_DIGIT
+    ::= "0".."9"
+      | "a".."f"
+      | "A".."F" ;
+
+
+BINARY_DIGIT
+    ::= "0" | "1" ;
+
+
+OCTAL_DIGIT
+    ::= "0".."7" ;
+
+
+(* ============================================================
+   5. FLOATING POINT
+   ============================================================ *)
+
+FLOAT
+    ::= DECIMAL_DIGIT+
+        "."
+        DECIMAL_DIGIT+
+        EXPONENT?
+
+      | DECIMAL_DIGIT+
+        EXPONENT ;
+
+
+EXPONENT
+    ::= ("e" | "E")
+        ("+" | "-")?
+        DECIMAL_DIGIT+ ;
+
+
+(* ============================================================
+   6. COMPLEX
+   ============================================================ *)
+
+COMPLEX
+    ::= FLOAT
+        "i"
+
+      | INTEGER
+        "i" ;
+
+
+(* ============================================================
+   7. STRING
+   ============================================================ *)
+
+STRING
+    ::= NORMAL_STRING
+      | RAW_STRING
+      | PS_STRING
+      | INTERPOLATED_STRING ;
+
+
+NORMAL_STRING
+    ::= '"'
+        STRING_CHARACTER*
+        '"' ;
+
+
+RAW_STRING
+    ::= "r"
+        '"'
+        RAW_CHARACTER*
+        '"' ;
+
+
+PS_STRING
+    ::= "ps"
+        '"'
+        PS_CHARACTER*
+        '"' ;
+
+
+INTERPOLATED_STRING
+    ::= "f"
+        '"'
+        INTERPOLATED_CHARACTER*
+        '"' ;
+
+
+STRING_CHARACTER
+    ::= ESCAPE_SEQUENCE
+      | STRING_TEXT ;
+
+
+INTERPOLATED_CHARACTER
+    ::= STRING_CHARACTER
+      | "{"
+        expression
+        "}" ;
+
+
+RAW_CHARACTER
+    ::= ? any character except '"' ? ;
+
+
+STRING_TEXT
+    ::= ? any character except '"' and '\' ? ;
+
+
+(* ============================================================
+   8. CHARACTER
+   ============================================================ *)
+
+CHAR
+    ::= "'"
+        CHAR_CHARACTER
+        "'" ;
+
+
+CHAR_CHARACTER
+    ::= ESCAPE_SEQUENCE
+      | ? any single character except "'" and '\' ? ;
+
+
+(* ============================================================
+   9. ESCAPE SEQUENCES
+   ============================================================ *)
+
+ESCAPE_SEQUENCE
+    ::= "\\n"
+      | "\\r"
+      | "\\t"
+      | "\\a"
+      | "\\b"
+      | "\\f"
+      | "\\v"
+      | "\\0"
+      | "\\\\"
+      | "\\\""
+      | "\\'"
+      | "\\x" HEX_DIGIT HEX_DIGIT
+      | "\\u" HEX_DIGIT{4}
+      | "\\U" HEX_DIGIT{8} ;
+
+
+(* ============================================================
+   10. OPERATORS
+   ============================================================ *)
+
+OPERATOR
+    ::= "++"
+      | "--"
+
+      | "=="
+      | "!="
+      | "<="
+      | ">="
+
+      | "&&"
+      | "||"
+
+      | "<<"
+      | ">>"
+
+      | "+="
+      | "-="
+      | "*="
+      | "/="
+      | "%="
+
+      | "&="
+      | "|="
+      | "^="
+
+      | "**"
+      | "->"
+      | "=>"
+      | "::"
+      | "?."
+      | "??"
+      | ".."
+      | "..="
+      | "|>"
+
+      | "..."
+      
+      | "+"
+      | "-"
+      | "*"
+      | "/"
+      | "%"
+      | "="
+      | "<"
+      | ">"
+      | "!"
+      | "~"
+      | "&"
+      | "|"
+      | "^"
+      | "?"
+      ;
+
+
+(* ============================================================
+   11. DELIMITERS
+   ============================================================ *)
+
+DELIMITER
+    ::= "("
+      | ")"
+      | "["
+      | "]"
+      | "{"
+      | "}"
+
+      | ","
+      | "."
+      | ";"
+      | ":"
+
+      | "@"
+      | "#"
+      | "'" ;
+
+
+(* ============================================================
+   12. LIFECYCLE SPECIAL TOKENS
+   ============================================================ *)
+
+CONSTRUCTOR_ORDER
+    ::= "+" DECIMAL_DIGIT+ ">" ;
+
+
+DESTRUCTOR_ORDER
+    ::= "~" DECIMAL_DIGIT+ ">" ;
+
+
+(* ============================================================
+   13. COMMENTS
+   ============================================================ *)
+
+COMMENT
+    ::= LINE_COMMENT
+      | BLOCK_COMMENT ;
+
+
+LINE_COMMENT
+    ::= "//"
+        ? any character except newline ?* ;
+
+
+BLOCK_COMMENT
+    ::= "/*"
+        ? any character ?*
+        "*/" ;
+
+
+(* ============================================================
+   14. WHITESPACE & NEWLINE
+   ============================================================ *)
+
+WHITESPACE
+    ::= " "
+      | "\t"
+      | "\r" ;
+
+
+NEWLINE
+    ::= "\n"
+      | "\r\n" ;
+
+
+(* ============================================================
+   15. SHEBANG
+   ============================================================ *)
+
+SHEBANG
+    ::= "#!"
+        ? any character except newline ?* ;
+
+
+(* ============================================================
+   16. END OF FILE
+   ============================================================ *)
+
+EOF
+    ::= ? end of input stream ? ;

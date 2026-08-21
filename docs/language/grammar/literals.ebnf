@@ -1,0 +1,87 @@
+(* ============================================================
+   Sulfur++ Formal Grammar — Literal Rules
+   File: docs/language/grammar/literals.ebnf
+   Status: Derived from src/core/lexer.cpp
+   ============================================================ *)
+
+
+(* ---- Integer Literals ---- *)
+
+integer_literal     ::= decimal_integer
+                      | hexadecimal_integer
+                      | binary_integer ;
+
+decimal_integer     ::= DIGIT { DIGIT | '_' } [ time_suffix ] ;
+hexadecimal_integer ::= '0' ('x' | 'X') HEX_DIGIT { HEX_DIGIT | '_' } ;
+binary_integer      ::= '0' ('b' | 'B') BIN_DIGIT { BIN_DIGIT | '_' } ;
+
+(* Note: octal (0o) is not implemented in the current lexer *)
+
+
+(* ---- Time Suffixes ---- *)
+(* The lexer converts time-suffixed numbers to milliseconds as float_64 *)
+
+time_suffix         ::= 'ms'    (* milliseconds, ×1 *)
+                      | 'us'    (* microseconds, ×0.001 *)
+                      | 's'     (* seconds, ×1000 *)
+                      | 'm'     (* minutes, ×60000 *)
+                      | 'h'     (* hours, ×3600000 *)
+                      | 'd' ;   (* days, ×86400000 *)
+
+
+(* ---- Float Literals ---- *)
+
+float_literal       ::= DIGIT { DIGIT | '_' } '.' DIGIT { DIGIT | '_' } [ exponent ] [ time_suffix ] ;
+exponent            ::= ('e' | 'E') [ '+' | '-' ] DIGIT { DIGIT } ;
+
+
+(* ---- String Literals ---- *)
+
+string_literal      ::= '"' { string_char } '"' ;
+
+string_char         ::= escape_sequence
+                      | ? any character except '"' and '\' ? ;
+
+escape_sequence     ::= '\' ( 'n' | 't' | 'r' | 'a' | 'b' | 'f' | 'v'
+                             | '"' | '\'' | '\' | '0' ) ;
+
+
+(* ---- Character Literals ---- *)
+
+char_literal        ::= '\'' ( escape_sequence | ? single char except '\'' and '\' ? ) '\'' ;
+
+
+(* ---- Process String Literals (Interpolation) ---- *)
+
+ps_string_literal   ::= 'ps' '"' { ps_segment } '"' ;
+
+ps_segment          ::= text_segment
+                      | interpolation_segment ;
+
+text_segment        ::= { ? any character except '"', '{', '}' ? | escape_sequence } ;
+
+interpolation_segment
+    ::= '{' expression [ ':' format_spec ] '}' ;
+
+format_spec         ::= 'join' '(' string_literal ')'
+                      | 'repeat' '(' expression ')'
+                      | 'pad' '(' expression ')'
+                      | 'upper'
+                      | 'lower' ;
+
+
+(* ---- Boolean & Null Literals ---- *)
+
+boolean_literal     ::= 'true' | 'false' ;
+null_literal        ::= 'null' ;
+
+
+(* ---- Aggregate Literal ---- *)
+
+literal             ::= integer_literal
+                      | float_literal
+                      | string_literal
+                      | char_literal
+                      | ps_string_literal
+                      | boolean_literal
+                      | null_literal ;
