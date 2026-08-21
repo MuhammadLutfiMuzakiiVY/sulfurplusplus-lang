@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
                 "USAGE:\n"
                 "    combust [OPTIONS] [FILE]\n\n"
                 "DESCRIPTION:\n"
-                "    Executes Sulfur++ scripts (.sfpp). If no file is provided, an interactive\n"
+                "    Executes Sulfur++ scripts (.sfpp, .spp). If no file is provided, an interactive\n"
                 "    REPL session is started.\n\n"
                 "OPTIONS:\n"
                 "    -d, --debug      Enable verbose debug tracing and memory tracking\n"

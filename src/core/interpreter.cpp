@@ -902,55 +902,74 @@ void Interpreter::execImport(const ImportStmt &s) {
     return;
   }
 
-  std::string path = s.pkg;
-  if (path.length() < 5 || path.substr(path.length() - 5) != ".sfpp") {
-    path += ".sfpp";
+  // Resolve file paths: primary extension is .sfpp, alias is .spp
+  std::vector<std::string> searchExtensions;
+  bool hasExplicitExt = (s.pkg.length() >= 5 && s.pkg.substr(s.pkg.length() - 5) == ".sfpp") ||
+                        (s.pkg.length() >= 4 && s.pkg.substr(s.pkg.length() - 4) == ".spp");
+  if (hasExplicitExt) {
+    searchExtensions.push_back("");
+  } else {
+    searchExtensions.push_back(".sfpp");
+    searchExtensions.push_back(".spp");
   }
 
-  // Try direct path first, then packages/ directory
-    // Try direct path first
-  std::ifstream f(path);
-  if (!f) {
-    // Cek apakah package diawali dengan "std/"
-    bool isStdModule = (s.pkg.rfind("std/", 0) == 0);
+  std::ifstream f;
+  std::string path;
 
+  for (const auto& ext : searchExtensions) {
+    std::string candidatePath = s.pkg + ext;
+
+    // 1. Try direct path
+    f.open(candidatePath);
+    if (f) {
+      path = candidatePath;
+      break;
+    }
+    f.clear();
+
+    bool isStdModule = (s.pkg.rfind("std/", 0) == 0);
     if (isStdModule) {
-      // 1. Coba cari di folder stdlib yang berada satu tingkat/folder dengan binary 'combust'
-      // (Ini bekerja untuk skenario ./build/combust karena std/ dicopy ke build/std/)
-      std::string exeDirStdPath = "build/" + path; // Mengarah ke build/std/...
-      
+      // 2. Try build/std/...
+      std::string exeDirStdPath = "build/" + candidatePath;
       f.open(exeDirStdPath);
       if (f) {
         path = exeDirStdPath;
-      } else {
-        // 2. Fallback: Coba cari di folder development asli (src/stdlib/...)
-        std::string srcStdPath = "src/stdlib/" + path; // Mengarah ke src/stdlib/...
-        f.open(srcStdPath);
-        if (f) {
-          path = srcStdPath;
-        } else {
-          // Jika keduanya gagal, baru lempar error
-          throw RuntimeError("Cannot open standard module '" + s.pkg + "' at " + path);
-        }
+        break;
       }
+      f.clear();
+
+      // 3. Try src/stdlib/...
+      std::string srcStdPath = "src/stdlib/" + candidatePath;
+      f.open(srcStdPath);
+      if (f) {
+        path = srcStdPath;
+        break;
+      }
+      f.clear();
     } else {
-      // --- LOGIKA LAMA UNTUK PACKAGES/ NON-STD ---
-      std::string pkgPath = "packages/" + path;
+      // 4. Try packages/...
+      std::string pkgPath = "packages/" + candidatePath;
       f.open(pkgPath);
       if (f) {
         path = pkgPath;
-      } else {
-        std::string stripped = s.pkg;
-        if (!stripped.empty() && stripped[0] == '@') stripped = s.pkg.substr(1);
-        std::string altPath = "packages/" + stripped + ".sfpp";
-        f.open(altPath);
-        if (f) {
-          path = altPath;
-        } else {
-          throw RuntimeError("Cannot open module '" + s.pkg + "'.");
-        }
+        break;
       }
+      f.clear();
+
+      std::string stripped = s.pkg;
+      if (!stripped.empty() && stripped[0] == '@') stripped = s.pkg.substr(1);
+      std::string altPath = "packages/" + stripped + ext;
+      f.open(altPath);
+      if (f) {
+        path = altPath;
+        break;
+      }
+      f.clear();
     }
+  }
+
+  if (!f.is_open()) {
+    throw RuntimeError("Cannot open module '" + s.pkg + "'. (Expected .sfpp or .spp)");
   }
 
 

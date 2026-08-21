@@ -55,7 +55,8 @@ static int runFmt(const std::string& target) {
     for (const auto& d : dirs) {
         if (fs::exists(d) && fs::is_directory(d)) {
             for (const auto& entry : fs::recursive_directory_iterator(d)) {
-                if (entry.path().extension() == ".sfpp") {
+                auto ext = entry.path().extension();
+                if (ext == ".sfpp" || ext == ".spp") {
                     formatFile(entry.path());
                 }
             }
@@ -203,6 +204,10 @@ static int runProject(const std::string& target) {
             script = "src/main.sfpp";
         } else if (fs::exists("main.sfpp")) {
             script = "main.sfpp";
+        } else if (fs::exists("src/main.spp")) {
+            script = "src/main.spp";
+        } else if (fs::exists("main.spp")) {
+            script = "main.spp";
         } else {
             std::cerr << "[sfpm] No entry script specified and sfpm.json not found.\n";
             return 1;
@@ -222,7 +227,8 @@ static int testProject() {
     std::cout << "[sfpm] Running tests in tests/ ...\n";
     int passed = 0, failed = 0;
     for (const auto& entry : fs::directory_iterator("tests")) {
-        if (entry.path().extension() == ".sfpp") {
+        auto ext = entry.path().extension();
+        if (ext == ".sfpp" || ext == ".spp") {
             std::string file = entry.path().string();
             std::string cmd = getCombustCmd() + " \"" + file + "\"";
             int res = std::system(cmd.c_str());
